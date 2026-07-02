@@ -13,6 +13,7 @@ const DEFAULTS = {
   stamps: {},
   stampBonus: false,
   deliveries: 0,
+  delivery: { target: null },
 };
 
 // 저장본에 없는 새 필드는 기본값으로 채운다 (버전 업 대비)

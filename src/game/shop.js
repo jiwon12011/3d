@@ -12,6 +12,7 @@ const RIBBONS = [
   ['violet', '보라', 0x9b8ce0, 20],
   ['pink', '분홍', 0xf28ab0, 20],
   ['green', '초록', 0x66b34c, 20],
+  ['gold', '금빛 (배달 5번 선물)', 0xf2c14e, 0, true], // hidden — 선물로만 획득
 ];
 const DRESSES = [
   ['navy', '감색 (기본)', 0x2e2a3d, 0],
@@ -92,7 +93,7 @@ function buildBakery(scene) {
   scene.add(b.build());
 }
 
-export function createShop(scene, save, hud, sfx, controls, rider, regions) {
+export function createShop(scene, save, hud, sfx, controls, rider, regions, delivery) {
   buildBakery(scene);
   const bx = WORLD.bakery.x, bz = WORLD.bakery.y;
   const gy = heightAt(bx, bz);
@@ -116,8 +117,9 @@ export function createShop(scene, save, hud, sfx, controls, rider, regions) {
 
   const swatches = (list, kind) => {
     const cs = save.state.cosmetics;
-    return `<div class="shop-sws">` + list.map(([key, name, hex, price]) => {
+    return `<div class="shop-sws">` + list.map(([key, name, hex, price, hidden]) => {
       const owned = cs.owned[kind].includes(key);
+      if (hidden && !owned) return ''; // 선물 전용 색은 받기 전엔 비밀
       const eq = cs[kind] === key;
       return `<button class="sw ${owned ? 'own' : ''} ${eq ? 'eq' : ''}" data-act="${kind}" data-k="${key}"
         style="background:#${hex.toString(16).padStart(6, '0')}"
@@ -157,6 +159,14 @@ export function createShop(scene, save, hud, sfx, controls, rider, regions) {
             ? `<button class="shop-buy done">해금됨</button>`
             : `<button class="shop-buy" data-act="pass" data-k="${rg.key}">✦ ${rg.price}</button>`}
         </div>`).join('')}
+        <div class="shop-row">
+          <div><span class="nm">🧺 배달 부탁</span><span class="ds">${delivery.active
+            ? `배달 중 — ${delivery.targetName}에게! (빛기둥을 따라가요)`
+            : `소포를 전해주면 사례할게요 (지금까지 ${save.state.deliveries}번)`}</span></div>
+          ${delivery.active
+            ? `<button class="shop-buy done">배달 중</button>`
+            : `<button class="shop-buy" data-act="delivery">받기</button>`}
+        </div>
         <div class="shop-hint">Esc / B / 화면 밖 클릭으로 닫고 다시 날아올라요 ✦</div>
       </div>`;
   }
@@ -195,6 +205,8 @@ export function createShop(scene, save, hud, sfx, controls, rider, regions) {
     } else if (act === 'pass') {
       const rg = REGIONS.find((r) => r.key === btn.dataset.k);
       if (rg && !regions.isUnlocked(rg.key) && pay(rg.price)) regions.unlock(rg.key);
+    } else if (act === 'delivery' && !delivery.active) {
+      delivery.start();
     }
     save.save();
     applyEffects();

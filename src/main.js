@@ -29,6 +29,8 @@ import { createSkyGarden } from './game/skygarden.js';
 import { createStamps } from './game/stamps.js';
 import { createJiji } from './game/jiji.js';
 import { createPhoto } from './game/photo.js';
+import { createNpcs } from './game/npcs.js';
+import { createDelivery } from './game/delivery.js';
 
 // --- 렌더러: 지브리색을 지키는 설정 ---
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -99,7 +101,11 @@ hud.setCandies(gameSave.state.candies);
 const candies = createCandies(gameSave, hud, sfx);
 scene.add(candies.group);
 const regions = createRegions(scene, gameSave, hud, sfx, controls);
-const shop = createShop(scene, gameSave, hud, sfx, controls, rider, regions);
+const npcs = createNpcs();
+scene.add(npcs.group);
+const delivery = createDelivery(npcs, gameSave, hud, sfx, rider);
+scene.add(delivery.group);
+const shop = createShop(scene, gameSave, hud, sfx, controls, rider, regions, delivery);
 const updrafts = createUpdrafts();
 scene.add(updrafts.group);
 controls.setLift(updrafts.liftAt);
@@ -202,7 +208,7 @@ addEventListener('keyup', (e) => { if (e.code === 'KeyN') timeFast = false; });
 
 window.__G = {
   camera, rider, controls, rig, scene, start, clouds, renderer, wind,
-  save: gameSave, shop, regions, candies, stamps, updrafts,
+  save: gameSave, shop, regions, candies, stamps, updrafts, npcs, delivery,
   setDayTime: (v) => { dayTime = v; },
   getDayTime: () => dayTime,
 };
@@ -243,6 +249,8 @@ function frame(dt) {
   garden.update(t);
   stamps.update(p);
   jiji.update(dt, t, p);
+  npcs.update(t, p, camera);
+  delivery.update(dt, t, p);
 
   // 시간이 흐른다 — 낮, 노을, 밤, 새벽
   dayTime = (dayTime + dt * (timeFast ? 40 : 1) / DAY_LENGTH) % 1;

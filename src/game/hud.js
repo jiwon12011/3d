@@ -84,7 +84,18 @@ const CSS = /* css */`
   .stamp-emoji { font-size: 1.5rem; }
   .stamp-name { font-size: 0.68rem; color: #6d6354; font-weight: 600; text-align: center; }
 
-  body.photo-mode #hud-candy, body.photo-mode #hud-toast { display: none; }
+  #npc-bubble {
+    position: fixed; z-index: 6; transform: translate(-50%, -100%);
+    font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    background: rgba(253, 250, 240, 0.95); border: 1.5px solid #cfc3a8;
+    border-radius: 14px; border-bottom-left-radius: 3px;
+    padding: 0.4rem 0.8rem; font-size: 0.88rem; color: #4a4238; font-weight: 600;
+    pointer-events: none; white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(60, 45, 30, 0.15);
+  }
+  #npc-bubble.hidden { display: none; }
+
+  body.photo-mode #hud-candy, body.photo-mode #hud-toast, body.photo-mode #npc-bubble { display: none; }
   #photo-hint {
     position: fixed; left: 50%; bottom: 4%; transform: translateX(-50%); z-index: 9;
     font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
