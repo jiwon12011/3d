@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { toon } from '../palette.js';
 import { mulberry32 } from '../noise.js';
+import { heightAt } from './terrain.js';
 
 const _m = new THREE.Matrix4();
 const _p = new THREE.Vector3();
@@ -30,8 +31,10 @@ export function createLeaves() {
   return {
     mesh,
     update(t, playerPos) {
-      // 나뭇잎은 지상 근처에만 — 높은 하늘에선 보이지 않게
-      const groundness = Math.max(0, 1 - Math.max(0, playerPos.y - 20) / 25);
+      // 나뭇잎은 풀밭 지상 근처에만 — 높은 하늘·바다 위에선 보이지 않게
+      const ground = heightAt(playerPos.x, playerPos.z);
+      const alt = playerPos.y - ground;
+      const groundness = ground < 0.5 ? 0 : Math.max(0, 1 - Math.max(0, alt - 18) / 22);
       leaves.forEach((lf, i) => {
         const k = t * 0.5 + lf.phase;
         _p.set(

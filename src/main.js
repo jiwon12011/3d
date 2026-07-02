@@ -7,6 +7,7 @@ import { createTerrain } from './world/terrain.js';
 import { createTown } from './world/town.js';
 import { createNature } from './world/nature.js';
 import { createLeaves, createSpeedLines } from './world/particles.js';
+import { createExtras } from './world/extras.js';
 import { createBroomRider } from './player/broom.js';
 import { createControls } from './player/controls.js';
 import { createCameraRig } from './camera.js';
@@ -55,6 +56,8 @@ scene.add(nature.group);
 const leaves = createLeaves();
 scene.add(leaves.mesh);
 const speedLines = createSpeedLines(camera);
+const extras = createExtras();
+scene.add(extras.group);
 
 // --- 플레이어 ---
 const rider = createBroomRider();
@@ -95,6 +98,7 @@ function frame(dt) {
   terrain.update(t);
   town.update(t);
   nature.update(t);
+  extras.update(dt, t);
   leaves.update(t, p);
   speedLines.update(dt, controls.boost && started);
 

@@ -50,8 +50,49 @@ function treeSpotOk(x, z) {
   if (Math.hypot(x - WORLD.townCenter.x, z - WORLD.townCenter.y) < 52) return false;
   if (Math.hypot(x - WORLD.fieldCenter.x, z - WORLD.fieldCenter.y) < 45) return false;
   if (Math.hypot(x - WORLD.bigTree.x, z - WORLD.bigTree.y) < 28) return false;
+  if (Math.hypot(x - WORLD.meadow.x, z - WORLD.meadow.y) < 48) return false;   // 꽃밭
+  if (Math.hypot(x - WORLD.cherry.x, z - WORLD.cherry.y) < 42) return false;   // 벚꽃 숲
+  if (Math.hypot(x - WORLD.autumn.x, z - WORLD.autumn.y) < 52) return false;   // 단풍 숲
+  if (Math.hypot(x - WORLD.windmill.x, z - WORLD.windmill.y) < 14) return false;
   if (distToPath(x, z) < 7) return false;
   return true;
+}
+
+// 색이 다른 잎을 가진 특별한 숲 (벚꽃·단풍) — 인스턴스 컬러로 변주
+function makeGrove(group, rand, center, count, spread, shades, leafScale) {
+  const trunks = [], blobs = [];
+  let guard = 0;
+  while (trunks.length < count && guard++ < count * 12) {
+    const a = rand() * Math.PI * 2;
+    const r = 4 + Math.sqrt(rand()) * spread;
+    const x = center.x + Math.cos(a) * r, z = center.y + Math.sin(a) * r;
+    const h = heightAt(x, z);
+    if (h < 1.6 || distToPath(x, z) < 6) continue;
+    const s = 0.75 + rand() * 0.7;
+    trunks.push({ x, y: h - 0.4 + 2 * s, z, s });
+    const nBlob = 2 + Math.floor(rand() * 3);
+    for (let bi = 0; bi < nBlob; bi++) {
+      blobs.push({
+        x: x + (rand() - 0.5) * 2.2 * s,
+        y: h - 0.4 + (3.8 + rand() * 1.7) * s,
+        z: z + (rand() - 0.5) * 2.2 * s,
+        s: (1.5 + rand() * 1.2) * s * leafScale,
+        ry: rand() * Math.PI,
+        color: shades[Math.floor(rand() * shades.length)],
+      });
+    }
+  }
+  const trunkMesh = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.3, 0.46, 4, 6), toon(C.trunk), trunks.length);
+  fillInstances(trunkMesh, trunks);
+  trunkMesh.castShadow = true;
+  group.add(trunkMesh);
+  const mat = windify(toon(0xffffff), 0.13, 1.5);
+  const blobMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.15, 1), mat, blobs.length);
+  fillInstances(blobMesh, blobs);
+  blobMesh.castShadow = true;
+  group.add(blobMesh);
+  return mat;
 }
 
 export function createNature() {
@@ -64,7 +105,7 @@ export function createNature() {
   const leafColors = [C.leaf1, C.leaf2, C.leaf3];
   let guard = 0;
   while (trunks.length < 340 && guard++ < 4000) {
-    const x = (rand() * 2 - 1) * 360, z = (rand() * 2 - 1) * 360;
+    const x = (rand() * 2 - 1) * 390, z = (rand() * 2 - 1) * 390;
     if (!treeSpotOk(x, z)) continue;
     // 숲 느낌: 노이즈 높은 곳에 몰리게 절반은 확률 탈락
     if (rand() < 0.35) continue;
@@ -126,6 +167,12 @@ export function createNature() {
     group.add(b.build());
   }
 
+  // --- 벚꽃 숲 (호숫가) & 단풍 숲 ---
+  const cherryMat = makeGrove(group, rand, WORLD.cherry, 22, 34,
+    [new THREE.Color(0xf7b7c8), new THREE.Color(0xf29db8), new THREE.Color(0xfad2dd)], 1.05);
+  const autumnMat = makeGrove(group, rand, WORLD.autumn, 34, 46,
+    [new THREE.Color(0xe8a33d), new THREE.Color(0xd97f4e), new THREE.Color(0xc9662f)], 1.0);
+
   // --- 풀 ---
   const grassItems = [];
   const grassShades = [new THREE.Color(0x7ec84e), new THREE.Color(0x93d95f), new THREE.Color(0x5fae3c)];
@@ -150,21 +197,36 @@ export function createNature() {
 
   // --- 들꽃 (작은 색점) ---
   const flowerItems = [];
-  const flowerShades = [new THREE.Color(0xfff6e8), new THREE.Color(0xf9d34c), new THREE.Color(0xf2a3b3)];
+  const flowerShades = [
+    new THREE.Color(0xfff6e8), new THREE.Color(0xf9d34c), new THREE.Color(0xf2a3b3),
+    new THREE.Color(0xe89bd8), new THREE.Color(0x9fb7f0),
+  ];
   guard = 0;
   while (flowerItems.length < 380 && guard++ < 4000) {
     const x = (rand() * 2 - 1) * 260, z = (rand() * 2 - 1) * 260;
     const h = heightAt(x, z);
     if (h < 1.5 || h > 18) continue;
     if (distToPath(x, z) > 26 && rand() < 0.6) continue; // 길가에 더 많이
-    flowerItems.push({ x, y: h + 0.42, z, s: 0.6 + rand() * 0.7, color: flowerShades[Math.floor(rand() * 3)] });
+    flowerItems.push({ x, y: h + 0.42, z, s: 0.6 + rand() * 0.7, color: flowerShades[Math.floor(rand() * flowerShades.length)] });
+  }
+  // 꽃밭 언덕: 알록달록한 꽃을 빽빽하게
+  guard = 0;
+  let meadowCount = 0;
+  while (meadowCount < 1300 && guard++ < 6000) {
+    const a = rand() * Math.PI * 2;
+    const r = Math.sqrt(rand()) * 48;
+    const x = WORLD.meadow.x + Math.cos(a) * r, z = WORLD.meadow.y + Math.sin(a) * r;
+    const h = heightAt(x, z);
+    if (h < 1.5) continue;
+    flowerItems.push({ x, y: h + 0.42, z, s: 0.7 + rand() * 0.9, color: flowerShades[Math.floor(rand() * flowerShades.length)] });
+    meadowCount++;
   }
   const flowerMesh = new THREE.InstancedMesh(
     new THREE.IcosahedronGeometry(0.16, 0), toon(0xffffff), flowerItems.length);
   fillInstances(flowerMesh, flowerItems);
   group.add(flowerMesh);
 
-  const windMats = [...leafMats, grassMat];
+  const windMats = [...leafMats, grassMat, cherryMat, autumnMat];
   return {
     group,
     update(t) {

@@ -9,7 +9,7 @@ const TURN_RATE = 1.25;
 const MAX_BANK = 0.6;     // 선회 시 기울기 35°
 const MIN_CLEARANCE = 1.6;
 const MAX_ALT = 150;
-const SOFT_EDGE = 330;    // 이 반경을 넘으면 안쪽으로 유도
+const SOFT_EDGE = 440;    // 이 반경을 넘으면 안쪽으로 유도 (앞바다 섬까지는 갈 수 있게)
 
 export function createControls(playerGroup) {
   const keys = new Set();
@@ -64,7 +64,7 @@ export function createControls(playerGroup) {
         const desired = Math.atan2(p.x, p.z); // 중심을 향하는 yaw (forward = (-sinψ, -cosψ))
         let diff = desired - yaw;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        yaw += diff * Math.min(1, (r - SOFT_EDGE) / 60) * dt * 1.6;
+        yaw += diff * Math.min(1, (r - SOFT_EDGE) / 70) * dt * 1.6;
       }
 
       // 전진
