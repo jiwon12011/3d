@@ -6,6 +6,7 @@ import { fbm2, smoothstep, lerp } from '../noise.js';
 export const WORLD = {
   size: 800,
   townCenter: new THREE.Vector2(-100, -80),   // 언덕 위 마을
+  bakery: new THREE.Vector2(-84, -58),        // 마을 빵집 (상점) — 길·전봇대를 피한 자리
   fieldCenter: new THREE.Vector2(60, 80),     // 논밭 시골
   lakeCenter: new THREE.Vector2(-60, 180),    // 작은 호수
   bigTree: new THREE.Vector2(120, -160),      // 대왕 녹나무 언덕
@@ -14,6 +15,8 @@ export const WORLD = {
   cherry: new THREE.Vector2(-120, 145),       // 호숫가 벚꽃 숲
   autumn: new THREE.Vector2(60, -230),        // 단풍 숲
   windmill: new THREE.Vector2(-170, -20),     // 풍차 언덕
+  snowPeak: new THREE.Vector2(-210, -215),    // 남서쪽 설산
+  skyGarden: new THREE.Vector2(-60, 180),     // 호수 상공의 하늘 정원 (y≈112)
   islands: [                                  // 앞바다의 작은 섬들
     new THREE.Vector2(330, -250),
     new THREE.Vector2(-360, 130),
@@ -67,6 +70,7 @@ export function heightAt(x, z) {
   h = lerp(h, 14, smoothstep(60, 14, d2(WORLD.bigTree)));      // 대왕나무 언덕
   h = lerp(h, -5, smoothstep(45, 18, d2(WORLD.lakeCenter)));   // 호수 웅덩이
   h = lerp(h, -3.5, smoothstep(15, 4, distToRiver(x, z)));     // 강줄기 (완만한 둑)
+  h = lerp(h, 88, smoothstep(115, 22, d2(WORLD.snowPeak)));    // 설산 — 눈 덮인 봉우리
   h = lerp(h, -8, smoothstep(175, 300, x));                    // 동쪽은 바다로
   // 사방이 바다인 섬 월드 — 지형 가장자리가 절대 보이지 않는다
   h = lerp(h, -9, smoothstep(330, 415, Math.hypot(x, z)));
@@ -84,6 +88,8 @@ const GRASS_LIGHT = new THREE.Color(C.grassLight);
 const GRASS_WARM = new THREE.Color(0xa9d55e); // 햇살에 바랜 연둣빛 패치
 const SAND = new THREE.Color(C.sand);
 const DIRT = new THREE.Color(C.dirt);
+const ROCK = new THREE.Color(0x9aa3a8);
+const SNOW = new THREE.Color(0xf6fbff);
 
 function groundColor(x, z, h, out) {
   // 두 스케일 노이즈 얼룩으로 잔디 톤 변주 — 단색 초록 금지
@@ -99,6 +105,9 @@ function groundColor(x, z, h, out) {
   out.lerp(SAND, smoothstep(2.0, 0.2, h) * 0.9 * smoothstep(8, 18, distToRiver(x, z)));
   // 흙길
   if (h > 0.8) out.lerp(DIRT, smoothstep(5.0, 2.2, distToPath(x, z)));
+  // 설산: 높이 따라 바위 회색 띠 → 눈. 노이즈로 설선이 자연스럽게 흔들린다
+  out.lerp(ROCK, smoothstep(26, 40, h) * 0.8);
+  out.lerp(SNOW, smoothstep(38, 52 - n * 6, h));
   return out;
 }
 

@@ -52,11 +52,11 @@ export function prismGeometry(w, h, d) {
   const A = [-hw, 0, -hd], B = [hw, 0, -hd], Cc = [hw, 0, hd], D = [-hw, 0, hd];
   const E = [-hw, h, 0], F = [hw, h, 0];
   const tris = [
-    A, B, F, A, F, E,   // 뒤 경사면
-    Cc, D, E, Cc, E, F, // 앞 경사면
-    D, A, E,            // 왼쪽 박공
-    B, Cc, F,           // 오른쪽 박공
-    B, A, D, B, D, Cc,  // 바닥
+    A, F, B, A, E, F,   // 뒤 경사면
+    Cc, E, D, Cc, F, E, // 앞 경사면
+    D, E, A,            // 왼쪽 박공
+    B, F, Cc,           // 오른쪽 박공
+    D, A, B, Cc, D, B,  // 바닥
   ];
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(tris.flat(), 3));

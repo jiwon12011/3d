@@ -21,6 +21,9 @@ export function createControls(playerGroup) {
   addEventListener('blur', () => keys.clear());
 
   let yaw = 0.67, pitch = 0, bank = 0, speed = BASE_SPEED;
+  let baseSpeed = BASE_SPEED, boostSpeed = BOOST_SPEED; // 상점 업그레이드로 올라간다
+  let boundaryFn = null; // 잠긴 지역의 소프트 락 (regions.js가 꽂아준다)
+  let liftFn = null;     // 상승기류 (updrafts.js가 꽂아준다)
   // 마우스/터치 드래그용 아날로그 입력 (-1..1) — 키 입력과 합산
   const analog = { turn: 0, climb: 0, boost: false };
   playerGroup.rotation.order = 'YXZ';
@@ -33,9 +36,12 @@ export function createControls(playerGroup) {
     forward,
     analog,
     get boost() { return keys.has('ShiftLeft') || keys.has('ShiftRight') || analog.boost; },
-    get speedFactor() { return (speed - BASE_SPEED) / (BOOST_SPEED - BASE_SPEED); },
+    get speedFactor() { return (speed - baseSpeed) / (boostSpeed - baseSpeed); },
     get bank() { return bank; },
     enable() { enabled = true; },
+    setSpeeds(base, boost) { baseSpeed = base; boostSpeed = boost; },
+    setBoundary(fn) { boundaryFn = fn; },
+    setLift(fn) { liftFn = fn; },
     // 검증용: 위치·방향 순간이동
     setPose(x, y, z, newYaw) {
       playerGroup.position.set(x, y, z);
@@ -62,7 +68,7 @@ export function createControls(playerGroup) {
       }
 
       // 속도 — 부스트는 exp smoothing으로 슝
-      const targetSpeed = this.boost && enabled ? BOOST_SPEED : BASE_SPEED;
+      const targetSpeed = this.boost && enabled ? boostSpeed : baseSpeed;
       speed += (targetSpeed - speed) * Math.min(1, 2.2 * dt);
 
       // 월드 가장자리에서 부드럽게 안쪽으로 선회 유도
@@ -75,10 +81,23 @@ export function createControls(playerGroup) {
         yaw += diff * Math.min(1, (r - SOFT_EDGE) / 70) * dt * 1.6;
       }
 
+      // 잠긴 지역 근처에서도 같은 방식으로 바깥으로 유도
+      if (boundaryFn) {
+        const b = boundaryFn(p.x, p.z);
+        if (b) {
+          let diff = b.yaw - yaw;
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          yaw += diff * b.strength * dt * 2.2;
+        }
+      }
+
       // 전진
       euler.set(pitch, yaw, 0);
       forward.set(0, 0, -1).applyEuler(euler);
       p.addScaledVector(forward, speed * dt);
+
+      // 상승기류 — 기둥 안이면 하늘로 스윽
+      if (liftFn) p.y += liftFn(p.x, p.y, p.z) * dt;
 
       // 고도 제한: 지면 위 / 구름 위 한계
       const ground = heightAt(p.x, p.z) + MIN_CLEARANCE;

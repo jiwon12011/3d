@@ -18,6 +18,17 @@ import { createDayCycle } from './daycycle.js';
 import { createBroomRider } from './player/broom.js';
 import { createControls } from './player/controls.js';
 import { createCameraRig } from './camera.js';
+import { createSave } from './game/save.js';
+import { createSfx } from './game/sfx.js';
+import { createHud } from './game/hud.js';
+import { createCandies } from './game/candies.js';
+import { createRegions } from './game/regions.js';
+import { createShop } from './game/shop.js';
+import { createUpdrafts } from './game/updrafts.js';
+import { createSkyGarden } from './game/skygarden.js';
+import { createStamps } from './game/stamps.js';
+import { createJiji } from './game/jiji.js';
+import { createPhoto } from './game/photo.js';
 
 // --- 렌더러: 지브리색을 지키는 설정 ---
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -45,6 +56,7 @@ sun.shadow.camera.left = -95; sun.shadow.camera.right = 95;
 sun.shadow.camera.top = 95; sun.shadow.camera.bottom = -95;
 sun.shadow.camera.near = 10; sun.shadow.camera.far = 420;
 sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 1.2; // 경사 지붕의 줄무늬(shadow acne) 제거 — 표면 법선 방향으로 샘플을 밀어냄
 sun.shadow.intensity = 0.55; // 그림자도 밝게 — 지브리의 화사한 그늘
 scene.add(sun, sun.target);
 const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x9bc47a, 0.9);
@@ -79,6 +91,24 @@ scene.add(rider.group);
 const controls = createControls(rider.group);
 const rig = createCameraRig(camera, rider.group);
 
+// --- 게임: 별사탕 수집 → 빵집 상점 → 지역 해금 ---
+const gameSave = createSave();
+const sfx = createSfx();
+const hud = createHud();
+hud.setCandies(gameSave.state.candies);
+const candies = createCandies(gameSave, hud, sfx);
+scene.add(candies.group);
+const regions = createRegions(scene, gameSave, hud, sfx, controls);
+const shop = createShop(scene, gameSave, hud, sfx, controls, rider, regions);
+const updrafts = createUpdrafts();
+scene.add(updrafts.group);
+controls.setLift(updrafts.liftAt);
+const garden = createSkyGarden();
+scene.add(garden.group);
+const stamps = createStamps(gameSave, hud, sfx);
+const jiji = createJiji(candies, rider, hud, sfx);
+scene.add(jiji.group);
+
 // --- 화면 보정: 은은한 블룸 + 채도 + 비네트 (지브리 수채화의 화사함) ---
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -108,6 +138,10 @@ const grade = new ShaderPass({
 composer.addPass(grade);
 composer.addPass(new OutputPass());
 
+// 사진 모드 — P로 시간을 멈추고 구도를 잡는다 (composer가 준비된 뒤에 생성)
+const photo = createPhoto(renderer, composer, camera, rider.group, sfx,
+  () => shop.isOpen || stamps.isOpen || !started);
+
 // --- 시작 오버레이 ---
 const overlay = document.getElementById('overlay');
 let started = false;
@@ -118,6 +152,7 @@ function start() {
   controls.enable();
   rig.start();
   wind.start(); // 오디오는 사용자 입력 안에서만 시작 가능
+  sfx.start();
 }
 overlay.addEventListener('click', start);
 addEventListener('keydown', start, { once: false });
@@ -167,6 +202,7 @@ addEventListener('keyup', (e) => { if (e.code === 'KeyN') timeFast = false; });
 
 window.__G = {
   camera, rider, controls, rig, scene, start, clouds, renderer, wind,
+  save: gameSave, shop, regions, candies, stamps, updrafts,
   setDayTime: (v) => { dayTime = v; },
   getDayTime: () => dayTime,
 };
@@ -177,11 +213,17 @@ let fogBlend = 0; // 구름 통과 뿌옇게
 let elapsed = 0;
 
 function frame(dt) {
+  // 사진 모드: 세계도 시간도 멈춘 채 카메라만 돈다
+  if (photo.active) {
+    photo.updateCamera();
+    composer.render();
+    return;
+  }
   elapsed += dt;
   const t = elapsed;
   const p = rider.group.position;
 
-  controls.update(dt);
+  if (!shop.isOpen) controls.update(dt); // 상점을 보는 동안 빗자루는 문 앞에 떠 있는다
   rig.update(dt, t, controls.forward, controls.speedFactor, controls.bank);
   rider.update(t, controls.speedFactor);
 
@@ -194,6 +236,13 @@ function frame(dt) {
   sparkles.update(t, p);
   speedLines.update(dt, controls.boost && started);
   wind.update(dt, controls.speedFactor);
+  candies.update(dt, t, p, dayTime);
+  shop.update(p);
+  regions.update(dt, t, p);
+  updrafts.update(t);
+  garden.update(t);
+  stamps.update(p);
+  jiji.update(dt, t, p);
 
   // 시간이 흐른다 — 낮, 노을, 밤, 새벽
   dayTime = (dayTime + dt * (timeFast ? 40 : 1) / DAY_LENGTH) % 1;

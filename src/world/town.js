@@ -133,6 +133,7 @@ export function createTown() {
     const r = 13 + rand() * 36;
     const x = tc.x + Math.cos(a) * r, z = tc.y + Math.sin(a) * r * 0.85;
     if (distToPath(x, z) < 7) continue;
+    if (Math.hypot(x - WORLD.bakery.x, z - WORLD.bakery.y) < 14) continue; // 빵집 자리
     if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < h.r + 8)) continue;
     houses.push(addHouse(b, rand, x, z));
   }
@@ -142,9 +143,10 @@ export function createTown() {
   addPowerLines(b);
   group.add(b.build());
 
-  // 굴뚝 연기 — 느리게 피어오르는 뭉게 파티클
+  // 굴뚝 연기 — 느리게 피어오르는 뭉게 파티클 (빵집 굴뚝은 항상 연기)
   const smokes = [];
   const smokeSpots = houses.slice(0, 3).map((h) => new THREE.Vector3(h.x, heightAt(h.x, h.z) + 7, h.z));
+  smokeSpots.push(new THREE.Vector3(WORLD.bakery.x, heightAt(WORLD.bakery.x, WORLD.bakery.y) + 8.9, WORLD.bakery.y));
   for (const spot of smokeSpots) {
     for (let i = 0; i < 5; i++) {
       const mat = toon(0xf4f2ec, { transparent: true, opacity: 0 });

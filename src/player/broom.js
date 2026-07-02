@@ -72,17 +72,21 @@ export function createBroomRider() {
     blush.scale.set(1, 0.7, 0.5);
     girl.add(blush);
   }
-  // 빨간 리본 (키키!)
+  // 빨간 리본 (키키!) — 상점 염색 대상
   const rb1 = mesh(new THREE.BoxGeometry(0.32, 0.2, 0.1), C.ribbon, -0.17, 1.68, 0);
   const rb2 = mesh(new THREE.BoxGeometry(0.32, 0.2, 0.1), C.ribbon, 0.17, 1.68, 0);
   rb1.rotation.z = 0.45; rb2.rotation.z = -0.45;
-  girl.add(rb1, rb2, mesh(new THREE.SphereGeometry(0.08, 8, 8), C.ribbon, 0, 1.7, 0));
+  const rbKnot = mesh(new THREE.SphereGeometry(0.08, 8, 8), C.ribbon, 0, 1.7, 0);
+  girl.add(rb1, rb2, rbKnot);
+  const ribbonMats = [rb1.material, rb2.material, rbKnot.material];
+  const dressMats = [dress.material];
   // 팔 — 앞으로 뻗어 손잡이를 잡고, 소매 끝은 하얀 커프스 + 손
   for (const sx of [-1, 1]) {
     const arm = mesh(new THREE.CapsuleGeometry(0.065, 0.5, 4, 8), C.dress, sx * 0.17, 0.82, -0.3);
     arm.rotation.x = 1.15;
     arm.rotation.z = sx * -0.18;
     girl.add(arm);
+    dressMats.push(arm.material);
     const cuff = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.07, 8), 0xf7f2e8, sx * 0.12, 0.6, -0.56);
     cuff.rotation.x = 1.15;
     girl.add(cuff);
@@ -127,17 +131,31 @@ export function createBroomRider() {
   group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 
   let lean = 0;
+  let nowT = 0;
+  const catAlert = { angle: 0, until: -1 }; // 지지가 뭔가를 발견하면 그쪽을 바라본다
   return {
     group,
+    setRibbonColor(hex) { for (const m of ribbonMats) m.color.set(hex); },
+    setDressColor(hex) { for (const m of dressMats) m.color.set(hex); },
+    catLook(localAngle, dur = 3) {
+      catAlert.angle = Math.max(-2.4, Math.min(2.4, localAngle));
+      catAlert.until = nowT + dur;
+    },
     update(t, boostFactor) {
+      nowT = t;
       // 부유 bobbing
       visual.position.y = Math.sin(t * 2.1) * 0.15;
       // 부스트 시 몸을 앞으로 숙임
       lean += ((boostFactor > 0.3 ? -0.18 : 0) - lean) * 0.08;
       visual.rotation.x = lean + Math.sin(t * 2.1 + 1) * 0.02;
-      // 고양이 꼬리 살랑 + 귀 쫑긋
+      // 고양이 꼬리 살랑 + 귀 쫑긋 — 발견 중엔 그쪽을 뚫어져라 본다
       tail.rotation.z = Math.sin(t * 3.2) * 0.5;
-      cat.rotation.y = Math.sin(t * 0.7) * 0.12;
+      if (t < catAlert.until) {
+        cat.rotation.y += (catAlert.angle - cat.rotation.y) * 0.14;
+        tail.rotation.z = Math.sin(t * 9) * 0.7; // 꼬리도 신나서 파닥
+      } else {
+        cat.rotation.y += (Math.sin(t * 0.7) * 0.12 - cat.rotation.y) * 0.1;
+      }
       // 치마 펄럭 (속도감)
       const flutter = 1 + Math.sin(t * 9) * 0.04 * (0.4 + boostFactor);
       dress.scale.set(flutter, 1, flutter);
