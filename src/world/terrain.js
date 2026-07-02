@@ -147,5 +147,6 @@ export function createTerrain() {
     update(t) {
       if (waterMat.userData.shader) waterMat.userData.shader.uniforms.uTime.value = t;
     },
+    setWaterColor(color) { waterMat.color.copy(color); },
   };
 }

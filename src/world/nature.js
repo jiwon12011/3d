@@ -102,6 +102,7 @@ export function createNature() {
   // --- 나무 배치 계산 ---
   const trunks = [];
   const blobsByColor = [[], [], []];
+  const hiBlobs = []; // 캐노피 위쪽의 밝은 하이라이트 — 투톤 수채화 나무
   const leafColors = [C.leaf1, C.leaf2, C.leaf3];
   let guard = 0;
   while (trunks.length < 340 && guard++ < 4000) {
@@ -111,18 +112,40 @@ export function createNature() {
     if (rand() < 0.35) continue;
     const y = heightAt(x, z) - 0.4;
     const s = 0.8 + rand() * 0.9;
+    const tall = rand() < 0.18; // 실루엣 변주: 길쭉한 나무
     trunks.push({ x, y: y + 2 * s, z, s });
-    const nBlob = 2 + Math.floor(rand() * 3);
-    for (let bi = 0; bi < nBlob; bi++) {
-      const ci = Math.floor(rand() * 3);
-      blobsByColor[ci].push({
-        x: x + (rand() - 0.5) * 2.4 * s,
-        y: y + (4 + rand() * 1.8) * s,
-        z: z + (rand() - 0.5) * 2.4 * s,
-        s: (1.6 + rand() * 1.3) * s,
-        ry: rand() * Math.PI,
-      });
+    let topY = 0;
+    if (tall) {
+      // 세로로 쌓인 좁은 캐노피 (사이프러스처럼)
+      for (let bi = 0; bi < 3; bi++) {
+        const ci = Math.floor(rand() * 3);
+        const by = y + (3.6 + bi * 1.7) * s;
+        blobsByColor[ci].push({
+          x: x + (rand() - 0.5) * 0.8 * s, y: by, z: z + (rand() - 0.5) * 0.8 * s,
+          s: (1.5 - bi * 0.28) * s, ry: rand() * Math.PI,
+        });
+        topY = Math.max(topY, by);
+      }
+    } else {
+      const nBlob = 2 + Math.floor(rand() * 3);
+      for (let bi = 0; bi < nBlob; bi++) {
+        const ci = Math.floor(rand() * 3);
+        const by = y + (4 + rand() * 1.8) * s;
+        blobsByColor[ci].push({
+          x: x + (rand() - 0.5) * 2.4 * s, y: by, z: z + (rand() - 0.5) * 2.4 * s,
+          s: (1.6 + rand() * 1.3) * s, ry: rand() * Math.PI,
+        });
+        topY = Math.max(topY, by);
+      }
     }
+    // 해가 닿는 꼭대기의 밝은 잎 — 나무마다 하나
+    hiBlobs.push({
+      x: x + (rand() - 0.5) * 0.9 * s,
+      y: topY + 0.9 * s,
+      z: z + (rand() - 0.5) * 0.9 * s,
+      s: (tall ? 0.95 : 1.35) * s,
+      ry: rand() * Math.PI,
+    });
   }
 
   const trunkGeo = new THREE.CylinderGeometry(0.32, 0.5, 4, 6);
@@ -142,6 +165,15 @@ export function createNature() {
     mesh.castShadow = true;
     group.add(mesh);
   });
+  // 하이라이트 캡 — 연둣빛으로 반짝이는 나무 꼭대기
+  {
+    const mat = windify(toon(0x8ed468), 0.13, 1.55);
+    leafMats.push(mat);
+    const mesh = new THREE.InstancedMesh(blobGeo, mat, hiBlobs.length);
+    fillInstances(mesh, hiBlobs);
+    mesh.castShadow = true;
+    group.add(mesh);
+  }
 
   // --- 대왕 녹나무 (토토로의 나무) ---
   {

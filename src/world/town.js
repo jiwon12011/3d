@@ -155,9 +155,27 @@ export function createTown() {
     }
   }
 
+  // 밤 불빛 — 창문·시계탑·등대에 어리는 노란 빛망울
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xffd98a, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const glowGeo = new THREE.SphereGeometry(0.5, 6, 5);
+  const glowSpots = [
+    ...houses.slice(0, 10).map((h) => [h.x, heightAt(h.x, h.z) + 2.2, h.z]),
+    [WORLD.townCenter.x, heightAt(WORLD.townCenter.x, WORLD.townCenter.y) + 16, WORLD.townCenter.y],
+    [WORLD.lighthouse.x, heightAt(WORLD.lighthouse.x, WORLD.lighthouse.y) + 13.9, WORLD.lighthouse.y],
+  ];
+  for (const [gx, gy, gz] of glowSpots) {
+    const g = new THREE.Mesh(glowGeo, glowMat);
+    g.position.set(gx, gy, gz);
+    group.add(g);
+  }
+
   return {
     group,
     houses,
+    setNightGlow(v) { glowMat.opacity = v * 0.85; },
     update(t) {
       for (const puff of smokes) {
         const k = (t * 0.09 + puff.userData.phase) % 1;

@@ -1,8 +1,8 @@
-// 하늘 그라디언트 반구 + 태양 번짐 — 카메라를 따라다닌다
+// 하늘 그라디언트 반구 + 태양 번짐 + 밤하늘의 별 — 카메라를 따라다닌다
+// 색은 시간 사이클(daycycle)이 매 프레임 갱신한다.
 import * as THREE from 'three';
 import { C } from '../palette.js';
-
-export const SUN_DIR = new THREE.Vector3(-0.5, 0.75, 0.45).normalize();
+import { mulberry32 } from '../noise.js';
 
 export function createSky() {
   const geo = new THREE.SphereGeometry(1800, 32, 16);
@@ -14,7 +14,7 @@ export function createSky() {
       uTop:     { value: new THREE.Color(C.skyTop) },
       uMid:     { value: new THREE.Color(C.skyMid) },
       uHorizon: { value: new THREE.Color(C.horizon) },
-      uSunDir:  { value: SUN_DIR.clone() },
+      uSunDir:  { value: new THREE.Vector3(-0.5, 0.75, 0.45).normalize() },
     },
     vertexShader: /* glsl */`
       varying vec3 vDir;
@@ -41,7 +41,39 @@ export function createSky() {
       }
     `,
   });
-  const sky = new THREE.Mesh(geo, mat);
-  sky.frustumCulled = false;
-  return sky;
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;
+
+  // 별 — 밤에만 서서히 떠오른다
+  const rand = mulberry32(4242);
+  const starCount = 420;
+  const pos = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    const a = rand() * Math.PI * 2;
+    const y = 0.08 + rand() * 0.9; // 수평선 위쪽 반구
+    const r = Math.sqrt(1 - y * y);
+    pos[i * 3] = Math.cos(a) * r * 1500;
+    pos[i * 3 + 1] = y * 1500;
+    pos[i * 3 + 2] = Math.sin(a) * r * 1500;
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const starMat = new THREE.PointsMaterial({
+    color: 0xfff9e8, size: 2.2, sizeAttenuation: false,
+    transparent: true, opacity: 0, depthWrite: false, fog: false,
+  });
+  const stars = new THREE.Points(starGeo, starMat);
+  stars.frustumCulled = false;
+  mesh.add(stars);
+
+  return {
+    mesh,
+    setLook(top, mid, horizon, sunDir) {
+      mat.uniforms.uTop.value.copy(top);
+      mat.uniforms.uMid.value.copy(mid);
+      mat.uniforms.uHorizon.value.copy(horizon);
+      mat.uniforms.uSunDir.value.copy(sunDir);
+    },
+    setStars(a) { starMat.opacity = a; },
+  };
 }

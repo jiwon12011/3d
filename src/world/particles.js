@@ -58,6 +58,47 @@ export function createLeaves() {
   };
 }
 
+// 밤의 반딧불이 — 풀밭 위를 낮게 떠다니는 노란 불빛
+export function createFireflies() {
+  const COUNT = 26;
+  const rand = mulberry32(1313);
+  const geo = new THREE.PlaneGeometry(0.22, 0.22);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffe9a3, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.frustumCulled = false;
+  const flies = Array.from({ length: COUNT }, () => ({
+    ox: (rand() * 2 - 1) * 34,
+    oz: (rand() * 2 - 1) * 34,
+    phase: rand() * Math.PI * 2,
+  }));
+  return {
+    mesh,
+    update(t, playerPos, night) {
+      const ground = heightAt(playerPos.x, playerPos.z);
+      const near = ground > 0.5 && playerPos.y - ground < 26 ? 1 : 0;
+      mat.opacity = night * near * 0.9;
+      if (mat.opacity < 0.02) return;
+      flies.forEach((f, i) => {
+        const x = playerPos.x + f.ox + Math.sin(t * 0.5 + f.phase) * 5;
+        const z = playerPos.z + f.oz + Math.cos(t * 0.4 + f.phase * 2) * 5;
+        const gy = heightAt(x, z);
+        _p.set(x, gy + 1 + Math.sin(t * 1.4 + f.phase) * 0.8, z);
+        const tw = 0.6 + 0.4 * Math.sin(t * 3.5 + f.phase * 3);
+        _s.setScalar(gy > 0.5 ? tw : 0.0001);
+        _e.set(0, t * 0.3 + f.phase, 0);
+        _q.setFromEuler(_e);
+        mesh.setMatrixAt(i, _m.compose(_p, _q, _s));
+      });
+      _s.set(1, 1, 1);
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
+
 // 바다 위에 반짝이는 햇빛 조각들 — 플레이어 주변 수면에만
 export function createSparkles() {
   const COUNT = 80;
