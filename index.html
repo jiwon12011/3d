@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>빗자루 소녀 — 지브리풍 하늘 산책</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #7ec3ea; }
+  canvas { display: block; }
+
+  #overlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, rgba(250, 246, 234, 0.94), rgba(240, 236, 218, 0.94));
+    cursor: pointer; transition: opacity 1.2s ease;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: #4a4238; text-align: center; user-select: none;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 {
+    font-size: clamp(2.2rem, 6vw, 4rem); font-weight: 800; letter-spacing: 0.35em;
+    text-indent: 0.35em; margin-bottom: 0.6rem; color: #3d5a80;
+    text-shadow: 0 3px 0 rgba(255,255,255,0.8);
+  }
+  #overlay .sub { font-size: 1rem; letter-spacing: 0.2em; color: #8a7f6e; margin-bottom: 2.6rem; }
+  #overlay .keys {
+    display: grid; grid-template-columns: auto auto; gap: 0.55rem 1.2rem;
+    font-size: 0.95rem; margin-bottom: 2.8rem; text-align: left;
+  }
+  #overlay .keys b {
+    font-family: inherit; background: #fff; border: 1px solid #d8cdb8; border-bottom-width: 3px;
+    border-radius: 8px; padding: 0.15rem 0.6rem; color: #5a5142; font-weight: 700;
+    text-align: center; min-width: 5.5rem; display: inline-block;
+  }
+  #overlay .start {
+    font-size: 1.05rem; letter-spacing: 0.15em; color: #c0574f; font-weight: 700;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+</style>
+</head>
+<body>
+  <div id="overlay">
+    <h1>빗자루 소녀</h1>
+    <div class="sub">— 지브리풍 하늘 산책 —</div>
+    <div class="keys">
+      <b>W / ↑</b><span>위로 올라가기</span>
+      <b>S / ↓</b><span>아래로 내려가기</span>
+      <b>A / ←　D / →</b><span>방향 바꾸기</span>
+      <b>Shift</b><span>슝— 부스트!</span>
+    </div>
+    <div class="start">화면을 클릭해서 날기 시작 ✦</div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
