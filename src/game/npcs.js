@@ -11,25 +11,27 @@ function mesh(geo, color, x = 0, y = 0, z = 0) {
   return m;
 }
 
-// 공용 몸통: 치마(원뿔)/머리/팔 — 오른팔을 돌려주면 인사가 된다
+// 공용 몸통: 치마 + 상체 캡슐 + 머리. 팔은 상체 어깨에 파묻혀 돋아난다 (허공 금지).
 function villager({ outfit, skin = C.skin, hair = 0x5a4632, tall = 1 }) {
   const g = new THREE.Group();
   g.scale.setScalar(tall);
-  g.add(mesh(new THREE.ConeGeometry(0.55, 1.5, 10), outfit, 0, 0.75, 0));
-  g.add(mesh(new THREE.SphereGeometry(0.28, 12, 10), skin, 0, 1.75, 0));
-  const hairCap = mesh(new THREE.SphereGeometry(0.31, 12, 10), hair, 0, 1.82, 0.05);
+  g.add(mesh(new THREE.ConeGeometry(0.55, 1.1, 10), outfit, 0, 0.55, 0));
+  const torso = mesh(new THREE.CapsuleGeometry(0.23, 0.3, 4, 10), outfit, 0, 1.25, 0);
+  g.add(torso);
+  const head = mesh(new THREE.SphereGeometry(0.28, 12, 10), skin, 0, 1.85, 0);
+  g.add(head);
+  const hairCap = mesh(new THREE.SphereGeometry(0.31, 12, 10), hair, 0, 1.92, 0.05);
   hairCap.scale.set(1, 0.85, 1);
   g.add(hairCap);
   const arms = [];
   for (const s of [-1, 1]) {
-    const arm = mesh(new THREE.CapsuleGeometry(0.07, 0.42, 4, 8), outfit, s * 0.42, 1.25, 0);
-    arm.geometry.translate(0, -0.21, 0); // 어깨를 피벗으로
-    arm.position.y = 1.45;
-    arm.rotation.z = s * 0.45;
+    const arm = mesh(new THREE.CapsuleGeometry(0.07, 0.32, 4, 8), outfit, s * 0.24, 1.46, 0);
+    arm.geometry.translate(0, -0.23, 0); // 어깨를 피벗으로
+    arm.rotation.z = s * 0.55;
     arms.push(arm);
     g.add(arm);
   }
-  return { g, rightArm: arms[1], head: g.children[1] };
+  return { g, rightArm: arms[1], head };
 }
 
 export function createNpcs() {
@@ -53,11 +55,11 @@ export function createNpcs() {
     const pz = b.y + Math.cos(ry) * 6.5 - Math.sin(ry) * 1.5;
     add('baker', '빵집 아주머니', px, pz, { x: tc.x, z: tc.y }, '갓 구운 빵 냄새 좋죠~?', () => {
       const v = villager({ outfit: 0xc95f6e, hair: 0x7a5a48, tall: 1.05 });
-      // 하얀 앞치마 + 올림머리
-      const apron = mesh(new THREE.BoxGeometry(0.5, 0.8, 0.1), 0xfdf6e3, 0, 0.8, 0.42);
-      apron.rotation.x = 0.12;
+      // 하얀 앞치마 (치마 표면에 밀착) + 올림머리
+      const apron = mesh(new THREE.BoxGeometry(0.42, 0.72, 0.07), 0xfdf6e3, 0, 0.58, 0.22);
+      apron.rotation.x = 0.35;
       v.g.add(apron);
-      v.g.add(mesh(new THREE.SphereGeometry(0.14, 8, 6), 0x7a5a48, 0, 2.12, -0.05));
+      v.g.add(mesh(new THREE.SphereGeometry(0.14, 8, 6), 0x7a5a48, 0, 2.22, -0.05));
       return v;
     });
   }
@@ -65,8 +67,8 @@ export function createNpcs() {
   add('farmer', '농부 아저씨', WORLD.fieldCenter.x - 10, WORLD.fieldCenter.y - 4,
     { x: WORLD.fieldCenter.x, z: WORLD.fieldCenter.y }, '올해 벼가 아주 잘 컸어!', () => {
       const v = villager({ outfit: 0x5e7a4a, tall: 1.1 });
-      v.g.add(mesh(new THREE.ConeGeometry(0.52, 0.3, 10), C.straw, 0, 2.05, 0)); // 밀짚모자
-      v.g.add(mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.04, 10), C.straw, 0, 1.94, 0));
+      v.g.add(mesh(new THREE.ConeGeometry(0.52, 0.3, 10), C.straw, 0, 2.15, 0)); // 밀짚모자
+      v.g.add(mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.04, 10), C.straw, 0, 2.04, 0));
       const hoe = mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 5), C.trunk, 0.55, 0.9, 0.2);
       hoe.rotation.z = 0.3;
       v.g.add(hoe);
@@ -76,8 +78,8 @@ export function createNpcs() {
   add('keeper', '등대지기 할아버지', WORLD.lighthouse.x - 5, WORLD.lighthouse.y + 4,
     { x: WORLD.lighthouse.x + 40, z: WORLD.lighthouse.y }, '오늘 바다는 잔잔하구먼.', () => {
       const v = villager({ outfit: 0x3d5a80, hair: 0xd8d8d8, tall: 1.08 });
-      v.g.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), 0xd8d8d8, 0, 1.6, -0.24)); // 수염
-      v.g.add(mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.14, 10), 0x2c4a6e, 0, 2.0, 0)); // 모자
+      v.g.add(mesh(new THREE.SphereGeometry(0.16, 8, 6), 0xd8d8d8, 0, 1.7, -0.24)); // 수염
+      v.g.add(mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.14, 10), 0x2c4a6e, 0, 2.12, 0)); // 모자
       return v;
     });
   // 버스 정류장의 아이 — 빨간 우산 (토토로)
@@ -92,7 +94,7 @@ export function createNpcs() {
   add('flowerGirl', '꽃밭의 소녀', WORLD.meadow.x + 6, WORLD.meadow.y + 8,
     { x: WORLD.meadow.x, z: WORLD.meadow.y }, '꽃반지 만들어줄까요?', () => {
       const v = villager({ outfit: 0x9b8ce0, hair: 0x3d2e22, tall: 0.85 });
-      v.g.add(mesh(new THREE.SphereGeometry(0.09, 6, 5), 0xf2a3b3, 0.14, 2.0, -0.18)); // 머리꽃
+      v.g.add(mesh(new THREE.SphereGeometry(0.09, 6, 5), 0xf2a3b3, 0.14, 2.12, -0.18)); // 머리꽃
       return v;
     });
 

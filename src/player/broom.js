@@ -57,6 +57,13 @@ export function createBroomRider() {
 
   const dress = mesh(new THREE.ConeGeometry(0.58, 1.2, 12), C.dress, 0, 0.5, 0);
   girl.add(dress);
+  // 상체·어깨 — 원뿔 꼭대기의 빈틈을 메워 팔이 몸에서 돋아나게 한다
+  const chest = mesh(new THREE.SphereGeometry(0.26, 12, 10), C.dress, 0, 0.93, -0.05);
+  chest.scale.set(1, 0.8, 0.9);
+  girl.add(chest);
+  for (const sx of [-1, 1]) {
+    girl.add(mesh(new THREE.SphereGeometry(0.1, 8, 6), C.dress, sx * 0.19, 0.97, -0.06));
+  }
   // 하얀 옷깃
   girl.add(mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.1, 8), 0xf7f2e8, 0, 1.06, 0));
   // 머리: 피부 구 + 뒷머리 + 앞머리(가르마 앞머리 볼륨)
@@ -92,12 +99,13 @@ export function createBroomRider() {
     girl.add(cuff);
     girl.add(mesh(new THREE.SphereGeometry(0.07, 8, 6), C.skin, sx * 0.1, 0.52, -0.63));
   }
-  // 다리 — 옆으로 모아 앉은 자세 (왼쪽), 둥근 빨간 신발
-  for (const [ox, oz] of [[-0.1, -0.06], [-0.16, 0.1]]) {
-    const leg = mesh(new THREE.CapsuleGeometry(0.08, 0.5, 4, 8), C.skin, -0.26 + ox * 0.3, 0.12, oz);
-    leg.rotation.z = 0.75;
+  // 다리 — 치마 밑 힙에서 돋아나 왼쪽으로 모아 앉은 자세, 발끝에 둥근 빨간 신발
+  for (const [hx, hz] of [[-0.08, -0.02], [-0.04, 0.14]]) {
+    const leg = mesh(new THREE.CapsuleGeometry(0.075, 0.42, 4, 8), C.skin, hx, 0.32, hz);
+    leg.geometry.translate(0, -0.29, 0); // 힙을 피벗으로 — 윗단이 치마 안에 묻힌다
+    leg.rotation.z = -1.05;
     girl.add(leg);
-    const shoe = mesh(new THREE.SphereGeometry(0.11, 8, 6), C.shoe, -0.53 + ox * 0.3, -0.07, oz - 0.03);
+    const shoe = mesh(new THREE.SphereGeometry(0.11, 8, 6), C.shoe, hx - 0.47, 0.05, hz - 0.02);
     shoe.scale.set(1, 0.75, 1.5);
     girl.add(shoe);
   }
