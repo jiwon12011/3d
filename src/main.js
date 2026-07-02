@@ -6,8 +6,9 @@ import { createClouds } from './world/clouds.js';
 import { createTerrain } from './world/terrain.js';
 import { createTown } from './world/town.js';
 import { createNature } from './world/nature.js';
-import { createLeaves, createSpeedLines } from './world/particles.js';
+import { createLeaves, createSpeedLines, createSparkles } from './world/particles.js';
 import { createExtras } from './world/extras.js';
+import { createWind } from './audio.js';
 import { createBroomRider } from './player/broom.js';
 import { createControls } from './player/controls.js';
 import { createCameraRig } from './camera.js';
@@ -58,6 +59,9 @@ scene.add(leaves.mesh);
 const speedLines = createSpeedLines(camera);
 const extras = createExtras();
 scene.add(extras.group);
+const sparkles = createSparkles();
+scene.add(sparkles.mesh);
+const wind = createWind();
 
 // --- 플레이어 ---
 const rider = createBroomRider();
@@ -74,11 +78,48 @@ function start() {
   overlay.classList.add('hidden');
   controls.enable();
   rig.start();
+  wind.start(); // 오디오는 사용자 입력 안에서만 시작 가능
 }
 overlay.addEventListener('click', start);
 addEventListener('keydown', start, { once: false });
 
-window.__G = { camera, rider, controls, rig, scene, start, clouds, renderer };
+// --- 마우스/터치 드래그 조종 ---
+// 드래그: 좌우 = 선회, 상하 = 하강/상승. 두 번째 손가락 = 부스트.
+let steerId = null, steerX = 0, steerY = 0;
+const activePointers = new Set();
+const canvas = renderer.domElement;
+canvas.addEventListener('pointerdown', (e) => {
+  start();
+  activePointers.add(e.pointerId);
+  if (steerId === null) {
+    steerId = e.pointerId;
+    steerX = e.clientX; steerY = e.clientY;
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* 합성 이벤트 등 */ }
+  } else {
+    controls.analog.boost = true;
+  }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (e.pointerId !== steerId) return;
+  const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+  controls.analog.turn = clamp1(-(e.clientX - steerX) / 130);
+  controls.analog.climb = clamp1(-(e.clientY - steerY) / 130);
+});
+function releasePointer(e) {
+  activePointers.delete(e.pointerId);
+  if (e.pointerId === steerId) {
+    steerId = null;
+    controls.analog.turn = 0;
+    controls.analog.climb = 0;
+  } else {
+    controls.analog.boost = false;
+  }
+  if (activePointers.size === 0) controls.analog.boost = false;
+}
+canvas.addEventListener('pointerup', releasePointer);
+canvas.addEventListener('pointercancel', releasePointer);
+
+window.__G = { camera, rider, controls, rig, scene, start, clouds, renderer, wind };
 
 // --- 루프 ---
 const clock = new THREE.Clock();
@@ -100,7 +141,9 @@ function frame(dt) {
   nature.update(t);
   extras.update(dt, t);
   leaves.update(t, p);
+  sparkles.update(t, p);
   speedLines.update(dt, controls.boost && started);
+  wind.update(dt, controls.speedFactor);
 
   // 구름 속: 화면이 순간 뿌예졌다가 빠져나오면 돌아온다
   fogBlend += ((inCloud ? 1 : 0) - fogBlend) * Math.min(1, 3 * dt);

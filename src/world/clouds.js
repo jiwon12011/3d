@@ -79,7 +79,8 @@ export function createClouds() {
         c.x += c.speed * dt;
         if (c.x > WRAP) c.x = -WRAP;
         if (playerPos) {
-          const dx = playerPos.x - c.x, dy = (playerPos.y - c.y) * 2.2, dz = playerPos.z - c.z;
+          // 세로로 빡빡하게 판정 — 구름 아래를 스칠 때 뿌예지지 않게
+          const dx = playerPos.x - c.x, dy = (playerPos.y - c.y) * 2.8, dz = playerPos.z - c.z;
           if (dx * dx + dy * dy + dz * dz < c.radius * c.radius) inCloud = true;
         }
       }

@@ -21,6 +21,8 @@ export function createControls(playerGroup) {
   addEventListener('blur', () => keys.clear());
 
   let yaw = 0.67, pitch = 0, bank = 0, speed = BASE_SPEED;
+  // 마우스/터치 드래그용 아날로그 입력 (-1..1) — 키 입력과 합산
+  const analog = { turn: 0, climb: 0, boost: false };
   playerGroup.rotation.order = 'YXZ';
   playerGroup.position.set(-20, 26, 20); // 마을이 보이는 하늘에서 시작
   const forward = new THREE.Vector3();
@@ -29,7 +31,8 @@ export function createControls(playerGroup) {
 
   return {
     forward,
-    get boost() { return keys.has('ShiftLeft') || keys.has('ShiftRight'); },
+    analog,
+    get boost() { return keys.has('ShiftLeft') || keys.has('ShiftRight') || analog.boost; },
     get speedFactor() { return (speed - BASE_SPEED) / (BOOST_SPEED - BASE_SPEED); },
     get bank() { return bank; },
     enable() { enabled = true; },
@@ -40,10 +43,15 @@ export function createControls(playerGroup) {
     },
 
     update(dt) {
-      const turn = (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0)
-                 - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0);
-      const climb = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0)
-                  - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
+      const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+      const turn = clamp1(
+        (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0)
+        - (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0)
+        + analog.turn);
+      const climb = clamp1(
+        (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0)
+        - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0)
+        + analog.climb);
 
       if (enabled) {
         yaw += turn * TURN_RATE * dt;

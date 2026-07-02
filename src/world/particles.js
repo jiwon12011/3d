@@ -2,13 +2,16 @@
 import * as THREE from 'three';
 import { toon } from '../palette.js';
 import { mulberry32 } from '../noise.js';
-import { heightAt } from './terrain.js';
+import { heightAt, WORLD } from './terrain.js';
 
 const _m = new THREE.Matrix4();
 const _p = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _e = new THREE.Euler();
 const _s = new THREE.Vector3(1, 1, 1);
+
+const LEAF_GREEN = new THREE.Color(0x6db54a);
+const PETAL_PINK = new THREE.Color(0xf5b3c6);
 
 export function createLeaves() {
   const COUNT = 18;
@@ -35,6 +38,9 @@ export function createLeaves() {
       const ground = heightAt(playerPos.x, playerPos.z);
       const alt = playerPos.y - ground;
       const groundness = ground < 0.5 ? 0 : Math.max(0, 1 - Math.max(0, alt - 18) / 22);
+      // 벚꽃 숲 근처에선 초록 잎 대신 분홍 꽃잎이 흩날린다
+      const nearCherry = Math.hypot(playerPos.x - WORLD.cherry.x, playerPos.z - WORLD.cherry.y) < 75;
+      mat.color.lerp(nearCherry ? PETAL_PINK : LEAF_GREEN, Math.min(1, 0.04));
       leaves.forEach((lf, i) => {
         const k = t * 0.5 + lf.phase;
         _p.set(
@@ -47,6 +53,52 @@ export function createLeaves() {
         _q.setFromEuler(_e);
         mesh.setMatrixAt(i, _m.compose(_p, _q, _s));
       });
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
+
+// 바다 위에 반짝이는 햇빛 조각들 — 플레이어 주변 수면에만
+export function createSparkles() {
+  const COUNT = 80;
+  const rand = mulberry32(777);
+  const geo = new THREE.PlaneGeometry(0.9, 0.9);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.4,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.frustumCulled = false;
+
+  const sparks = Array.from({ length: COUNT }, () => ({ x: 0, z: 0, phase: rand() * Math.PI * 2, alive: false }));
+
+  function respawn(sp, px, pz) {
+    for (let tries = 0; tries < 6; tries++) {
+      const a = rand() * Math.PI * 2;
+      const r = 30 + rand() * 220;
+      const x = px + Math.cos(a) * r, z = pz + Math.sin(a) * r;
+      if (heightAt(x, z) < -0.5) { sp.x = x; sp.z = z; sp.alive = true; return; }
+    }
+    sp.alive = false;
+  }
+
+  return {
+    mesh,
+    update(t, playerPos) {
+      sparks.forEach((sp, i) => {
+        if (!sp.alive || Math.hypot(sp.x - playerPos.x, sp.z - playerPos.z) > 280) {
+          respawn(sp, playerPos.x, playerPos.z);
+        }
+        const tw = Math.max(0, Math.sin(t * 2.2 + sp.phase)); // 깜빡깜빡
+        _p.set(sp.x, 0.55, sp.z);
+        _s.setScalar(sp.alive ? 0.4 + tw * 1.1 : 0.0001);
+        _e.set(0, sp.phase + t * 0.2, 0);
+        _q.setFromEuler(_e);
+        mesh.setMatrixAt(i, _m.compose(_p, _q, _s));
+      });
+      _s.set(1, 1, 1); // 공용 스케일 벡터 복원
       mesh.instanceMatrix.needsUpdate = true;
     },
   };
