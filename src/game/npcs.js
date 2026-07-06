@@ -119,8 +119,17 @@ export function createNpcs() {
       const npc = list.find((n) => n.key === key);
       if (npc) showBubble(npc, text, dur);
     },
+    // 귀향 연출 — 마을 사람 모두가 한참 동안 손을 흔들어준다
+    waveAll(dur = 8) {
+      for (const npc of list) npc.waveAllFor = dur;
+    },
     update(t, player, camera) {
       for (const npc of list) {
+        if (npc.waveAllFor) {
+          npc.waveUntil = t + npc.waveAllFor;
+          npc.cooldownUntil = t + npc.waveAllFor;
+          npc.waveAllFor = 0;
+        }
         const d = Math.hypot(player.x - npc.x, player.z - npc.z);
         const near = d < 22 && player.y < npc.y + 26;
         // 다가오면 인사 (쿨다운 20초)

@@ -1,5 +1,5 @@
 // 배달 퀘스트 — 빵집에서 소포를 받아 마을 사람에게 전한다 (키키의 본업!)
-// 대상에겐 빛기둥이 서고, 빗자루엔 소포가 매달린다. 5번마다 아주머니의 선물.
+// 길 안내는 스토리 퀘스트 화살표가 맡고, 빗자루엔 소포가 매달린다. 5번마다 아주머니의 선물.
 import * as THREE from 'three';
 import { toon } from '../palette.js';
 import { C } from '../palette.js';
@@ -15,17 +15,6 @@ const GIFT_EVERY = 5;
 
 export function createDelivery(npcs, save, hud, sfx, rider) {
   const group = new THREE.Group();
-
-  // 대상 위의 빛기둥
-  const pillar = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.2, 2.8, 46, 12, 1, true),
-    new THREE.MeshBasicMaterial({
-      color: 0xffe9a8, transparent: true, opacity: 0.16,
-      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-    })
-  );
-  pillar.visible = false;
-  group.add(pillar);
 
   // 빗자루 솔에 매달린 소포 (리본 십자 포장)
   const parcel = new THREE.Group();
@@ -49,13 +38,7 @@ export function createDelivery(npcs, save, hud, sfx, rider) {
     syncVisual();
   }
   function syncVisual() {
-    const key = active();
-    parcel.visible = !!key;
-    pillar.visible = !!key;
-    if (key) {
-      const npc = npcs.byKey(key);
-      pillar.position.set(npc.x, npc.y + 23, npc.z);
-    }
+    parcel.visible = !!active();
   }
   syncVisual(); // 저장된 배달이 있으면 이어서
 
@@ -65,7 +48,7 @@ export function createDelivery(npcs, save, hud, sfx, rider) {
     const pick = pool[Math.floor(Math.random() * pool.length)];
     setTarget(pick.key);
     const npc = npcs.byKey(pick.key);
-    hud.toast(`🧺 배달 부탁! ${npc.name}에게 소포를 — ${pick.hint} 쪽 빛기둥을 찾아요`, 4500);
+    hud.toast(`🧺 배달 부탁! ${npc.name}에게 소포를 — ${pick.hint} 쪽 화살표를 따라가요`, 4500);
     sfx.bell();
   }
 
@@ -105,8 +88,6 @@ export function createDelivery(npcs, save, hud, sfx, rider) {
     update(dt, t, p) {
       const key = active();
       if (!key) return;
-      pillar.material.opacity = 0.13 + Math.sin(t * 2.5) * 0.05;
-      pillar.rotation.y = t * 0.4;
       const npc = npcs.byKey(key);
       if (Math.hypot(p.x - npc.x, p.z - npc.z) < 13 && p.y < npc.y + 15) complete(npc);
     },

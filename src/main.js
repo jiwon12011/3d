@@ -8,7 +8,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { C } from './palette.js';
 import { createSky } from './world/sky.js';
 import { createClouds } from './world/clouds.js';
-import { createTerrain } from './world/terrain.js';
+import { createTerrain, heightAt } from './world/terrain.js';
 import { createTown } from './world/town.js';
 import { createNature } from './world/nature.js';
 import { createLeaves, createSpeedLines, createSparkles, createFireflies } from './world/particles.js';
@@ -31,6 +31,10 @@ import { createJiji } from './game/jiji.js';
 import { createPhoto } from './game/photo.js';
 import { createNpcs } from './game/npcs.js';
 import { createDelivery } from './game/delivery.js';
+import { createCity } from './world/city.js';
+import { createDialogue } from './game/dialogue.js';
+import { createDiary } from './game/diary.js';
+import { createStory } from './game/story.js';
 
 // --- 렌더러: 지브리색을 지키는 설정 ---
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -115,6 +119,18 @@ const stamps = createStamps(gameSave, hud, sfx);
 const jiji = createJiji(candies, rider, hud, sfx);
 scene.add(jiji.group);
 
+// --- 스토리 「도시 편」: 바다 건너 도시 + 대화창 + 일기장 + 막 진행 ---
+const city = createCity();
+scene.add(city.group);
+controls.setGroundFn((x, z) => Math.max(heightAt(x, z), city.heightAt(x, z)));
+const dialogue = createDialogue(gameSave, sfx);
+const diary = createDiary(gameSave);
+const story = createStory({
+  scene, save: gameSave, hud, sfx, controls, rider, dialogue, city, npcs,
+  setDayTime: (v) => { dayTime = v; },
+});
+diary.bind(story);
+
 // --- 화면 보정: 은은한 블룸 + 채도 + 비네트 (지브리 수채화의 화사함) ---
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -146,7 +162,7 @@ composer.addPass(new OutputPass());
 
 // 사진 모드 — P로 시간을 멈추고 구도를 잡는다 (composer가 준비된 뒤에 생성)
 const photo = createPhoto(renderer, composer, camera, rider.group, sfx,
-  () => shop.isOpen || stamps.isOpen || !started);
+  () => shop.isOpen || stamps.isOpen || diary.isOpen || story.busy || !started);
 
 // --- 시작 오버레이 ---
 const overlay = document.getElementById('overlay');
@@ -209,6 +225,7 @@ addEventListener('keyup', (e) => { if (e.code === 'KeyN') timeFast = false; });
 window.__G = {
   camera, rider, controls, rig, scene, start, clouds, renderer, wind,
   save: gameSave, shop, regions, candies, stamps, updrafts, npcs, delivery,
+  city, story, dialogue, diary,
   setDayTime: (v) => { dayTime = v; },
   getDayTime: () => dayTime,
 };
@@ -251,12 +268,19 @@ function frame(dt) {
   jiji.update(dt, t, p);
   npcs.update(t, p, camera);
   delivery.update(dt, t, p);
+  city.update(dt, t, p);
+  dialogue.update(dt);
+  story.update(dt, t, p);
+
+  // 도시에서는 바람이 도시 소음으로, 별과 반딧불이는 숨는다
+  const cityK = city.blendAt(p.x, p.z);
+  wind.setCity(cityK);
 
   // 시간이 흐른다 — 낮, 노을, 밤, 새벽
   dayTime = (dayTime + dt * (timeFast ? 40 : 1) / DAY_LENGTH) % 1;
   const dc = cycle.sample(dayTime);
   sky.setLook(dc.skyTop, dc.skyMid, dc.horizon, dc.sunDir);
-  sky.setStars(dc.stars);
+  sky.setStars(dc.stars * (1 - cityK)); // 도시의 빛은 별을 지운다
   scene.fog.color.copy(dc.horizon);
   sun.color.copy(dc.sun);
   sun.intensity = dc.sunI;
@@ -267,7 +291,8 @@ function frame(dt) {
   terrain.setWaterColor(dc.water);
   town.setNightGlow(dc.glow);
   extras.setNight(dc.glow);
-  fireflies.update(t, p, dc.glow);
+  city.setNight(dc.glow, dc.horizon);
+  fireflies.update(t, p, dc.glow * (1 - cityK)); // 도시엔 반딧불이가 없다
   sparkles.mesh.material.opacity = 0.4 * (1 - dc.glow * 0.85); // 햇빛 반짝임은 밤에 잦아든다
 
   // 구름 속: 화면이 순간 뿌예졌다가 빠져나오면 돌아온다

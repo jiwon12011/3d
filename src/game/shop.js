@@ -161,7 +161,7 @@ export function createShop(scene, save, hud, sfx, controls, rider, regions, deli
         </div>`).join('')}
         <div class="shop-row">
           <div><span class="nm">🧺 배달 부탁</span><span class="ds">${delivery.active
-            ? `배달 중 — ${delivery.targetName}에게! (빛기둥을 따라가요)`
+            ? `배달 중 — ${delivery.targetName}에게! (화살표를 따라가요)`
             : `소포를 전해주면 사례할게요 (지금까지 ${save.state.deliveries}번)`}</span></div>
           ${delivery.active
             ? `<button class="shop-buy done">배달 중</button>`

@@ -24,6 +24,9 @@ export function createControls(playerGroup) {
   let baseSpeed = BASE_SPEED, boostSpeed = BOOST_SPEED; // 상점 업그레이드로 올라간다
   let boundaryFn = null; // 잠긴 지역의 소프트 락 (regions.js가 꽂아준다)
   let liftFn = null;     // 상승기류 (updrafts.js가 꽂아준다)
+  let groundFn = heightAt; // 지면 높이 — 도시 섬이 있으면 main.js가 합성 함수를 꽂는다
+  // 소프트 엣지의 중심 — 마을이 기본, 도시로 건너가면 story.js가 도시로 옮긴다
+  let anchor = { x: 0, z: 0, r: SOFT_EDGE };
   // 마우스/터치 드래그용 아날로그 입력 (-1..1) — 키 입력과 합산
   const analog = { turn: 0, climb: 0, boost: false };
   playerGroup.rotation.order = 'YXZ';
@@ -42,6 +45,8 @@ export function createControls(playerGroup) {
     setSpeeds(base, boost) { baseSpeed = base; boostSpeed = boost; },
     setBoundary(fn) { boundaryFn = fn; },
     setLift(fn) { liftFn = fn; },
+    setGroundFn(fn) { groundFn = fn; },
+    setAnchor(x, z, r) { anchor = { x, z, r }; },
     // 검증용: 위치·방향 순간이동
     setPose(x, y, z, newYaw) {
       playerGroup.position.set(x, y, z);
@@ -73,12 +78,12 @@ export function createControls(playerGroup) {
 
       // 월드 가장자리에서 부드럽게 안쪽으로 선회 유도
       const p = playerGroup.position;
-      const r = Math.hypot(p.x, p.z);
-      if (r > SOFT_EDGE) {
-        const desired = Math.atan2(p.x, p.z); // 중심을 향하는 yaw (forward = (-sinψ, -cosψ))
+      const r = Math.hypot(p.x - anchor.x, p.z - anchor.z);
+      if (r > anchor.r) {
+        const desired = Math.atan2(p.x - anchor.x, p.z - anchor.z); // 중심을 향하는 yaw (forward = (-sinψ, -cosψ))
         let diff = desired - yaw;
         diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-        yaw += diff * Math.min(1, (r - SOFT_EDGE) / 70) * dt * 1.6;
+        yaw += diff * Math.min(1, (r - anchor.r) / 70) * dt * 1.6;
       }
 
       // 잠긴 지역 근처에서도 같은 방식으로 바깥으로 유도
@@ -100,7 +105,7 @@ export function createControls(playerGroup) {
       if (liftFn) p.y += liftFn(p.x, p.y, p.z) * dt;
 
       // 고도 제한: 지면 위 / 구름 위 한계
-      const ground = heightAt(p.x, p.z) + MIN_CLEARANCE;
+      const ground = groundFn(p.x, p.z) + MIN_CLEARANCE;
       if (p.y < ground) { p.y = ground; if (pitch < 0) pitch *= 0.5; }
       if (p.y > MAX_ALT) { p.y = MAX_ALT; if (pitch > 0) pitch *= 0.5; }
 

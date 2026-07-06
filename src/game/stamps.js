@@ -1,5 +1,6 @@
 // 풍경 스탬프 도감 — 명소 상공을 처음 지나면 수첩에 스탬프가 찍힌다. J로 펼쳐본다.
 import { WORLD } from '../world/terrain.js';
+import { CITY } from '../world/city.js';
 
 const STAMPS = [
   { key: 'tower', name: '시계탑 광장', emoji: '⏰', x: WORLD.townCenter.x, z: WORLD.townCenter.y, r: 26 },
@@ -14,6 +15,7 @@ const STAMPS = [
   { key: 'island', name: '외딴 섬', emoji: '🏝️', islands: true, r: 22 },
   { key: 'peak', name: '설산 정상', emoji: '❄️', x: WORLD.snowPeak.x, z: WORLD.snowPeak.y, r: 30, minY: 78 },
   { key: 'garden', name: '하늘 정원', emoji: '☁️', x: WORLD.skyGarden.x, z: WORLD.skyGarden.y, r: 30, minY: 100 },
+  { key: 'city', name: '수평선 너머 도시', emoji: '🏙️', x: CITY.center.x, z: CITY.center.y, r: 60 },
 ];
 const REWARD = 10, ALL_BONUS = 100;
 

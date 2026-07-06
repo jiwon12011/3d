@@ -14,6 +14,8 @@ const DEFAULTS = {
   stampBonus: false,
   deliveries: 0,
   delivery: { target: null },
+  // 스토리 「도시 편」 — 막, 초대장, 도시 배달 수, 들꽃 발견, 진행 중인 배달, 대화 로그
+  story: { act: 0, invited: false, cityDeliveries: 0, flower: false, job: null, lastJob: null, log: [] },
 };
 
 // 저장본에 없는 새 필드는 기본값으로 채운다 (버전 업 대비)
